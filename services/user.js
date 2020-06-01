@@ -15,13 +15,6 @@ module.exports.get = async (idOrEmail, fieldName = '_id') => {
   return data;
 };
 
-module.exports.getUserData = async (userdata, fieldName) => {
-  const data = await Model.find({
-    [fieldName]: { $in: userdata },
-  });
-  return data;
-};
-
 module.exports.isUserExists = (idOrEmail, fieldName = '_id') => Model.countDocuments({
   [fieldName]: idOrEmail,
 });
