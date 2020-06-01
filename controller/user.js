@@ -7,8 +7,6 @@ const Usermodel = require('../model/user')
 const {
     save,
     get,
-    update,
-    getUsersMainProfileData,
     getUsersProfileData,
     updateProfile,
     updateuser
