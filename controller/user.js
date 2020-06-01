@@ -1,89 +1,121 @@
 const fs = require('fs');
 const path = require('path');
-var bcrypt = require('bcryptjs');
-const db = require('../config').mongoUrl
+const { ObjectId } = require('mongoose').Types;
+const Model = require('../model/user')
+const request = require('request');
 
-const Usermodel = require('../model/user')
-const {
-    save,
-    get,
-    update,
-    getUsersMainProfileData,
-    getUsersProfileData,
-    updateProfile,
-    updateuser
-    } = require('../services/user');
+module.exports.save = (data) => new Model(data).save();
 
- 
+module.exports.get = async (idOrEmail, fieldName = '_id') => {
+    // console.log('zzz',idOrEmail);
+    // console.log('yyy',idOrEmail);
+  const data = await Model.findOne({
+    [fieldName]: `${idOrEmail}`,
+  });
+  return data;
+};
 
+module.exports.getUserData = async (userdata, fieldName) => {
+  const data = await Model.find({
+    [fieldName]: { $in: userdata },
+  });
+  return data;
+};
+
+module.exports.isUserExists = (idOrEmail, fieldName = '_id') => Model.countDocuments({
+  [fieldName]: idOrEmail,
+});
+
+module.exports.getUsersMainProfileData = async (userId) => {
+  try {
+    const userData = await Model.aggregate([
+      {
+        $match: {
+          _id: ObjectId(userId),
+        },
+      },
+      {
+        $project: {
+          password: 0,
+        },
+      },
+    ]);
+    // console.log('userdata is',userData)
+    return userData[0];
+  } catch (error) {
+    throw error;
+  }
+};
+module.exports.updateProfile = async (profileId, body)=>{
+ try{
   const {
-  handleResponse,
-  handleError,
-} = require('../common/requestHandle');
-
-
-
-
-  module.exports.adduser = async ({ body }, res) => {
-    try {
-      const {
-     firstName, lastName, email,password,
-      } = body;
-    
-      const existingUserEmail = await get(email, 'email');
-      // if (existingUserEmail && existingUserEmail.isEmailVerified === true) {
-      if (existingUserEmail) {
-        return handleResponse({ res,statusCode:400,msg:'User Already exists. Please try another one!' });
-      }
-        user = await save(body);
-        if(user){
-             handleResponse({ res,msg:' User Registered Successfully', data: user });
-        }else{
-            handleResponse({ res,msg:'not registered user', });
-        }
-    } catch (err) {
-      return handleError({ res, err });
-    }
-  };
-
-  module.exports.getUser = async (req,res,next) => {
-    try {
-      const user = await getUsersProfileData();
-      handleResponse({
-        res,
-        statusCode: 200,
-        msg: 'Your fetch data successully',
-        data:user,
-      });
-      } catch (err) {
-      handleError({ res, err });
-    }
-  };
-  module.exports.updateuserProfile = async (req, res)  => {
-    try {
-      const userId = req.params.userId
-        const data = await updateuser(req,userId)
-        if(data){
-          handleResponse({ res,msg:'PersonDetails update successfully', data: data });
-        }else{
-          throw 'not data found'
-        }
-    }
-    catch (err) {
-      handleError({ res, err });
-    }
+    firstName, lastName, email,password,
+     } = body;
+  const data = await Model.findByIdAndUpdate(
+    profileId,
+    {
+      $set: {
+        firstName:firstName,
+        lastName:lastName,
+        email:email,
+        password:password
+      },
+    },
+    {
+      runValidators: true,
+      new: true,
+    },
+  );
+  return data;
+ }catch(error){
+   throw error;
+ }
 }
 
-module.exports.deleteProfile = async (req, res) => {
+module.exports.getUsersProfileData = async () => {
     try {
-      const userId = req.params.userId
-      const user = await Usermodel.findOneAndRemove({_id: userId})
-      if(user){
-          handleResponse({ res,msg:'Persondetails delete successfully'});
-      }else{
-        handleResponse({ res,msg:'Persondetails Not  delete'});
-      }
-      } catch (err) {
-      handleError({ res, err });
+      const userData = await Model.aggregate([
+        {
+          $project: {
+            password: 0,
+          },
+        },
+      ]);
+      console.log('userdata is',userData)
+      return userData;
+    } catch (error) {
+      throw error;
     }
   };
+  module.exports.updateuser = async(req, userId)=>{
+    try{
+      const firstName = req.body.firstName;
+    const lastName  = req.body.lastName;
+    const email =  req.body.email;
+    const password =  req.body.password;
+    const updatedata = await Model.findByIdAndUpdate(
+            {_id:userId},
+            {
+              $set: {
+                firstname:firstName,
+                lastname:lastName,
+                email:email,
+                password:password
+              },
+            },
+            {
+             upsert: true
+            },
+          );
+          return updatedata;
+  
+    }catch(err){
+      throw err;
+    }
+  };
+
+
+
+
+
+
